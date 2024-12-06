@@ -14,7 +14,6 @@ local content = file:read("a")
 file:close()
 
 local sum = 0
-local enabled = true
 local uncorruptedData = string.gmatch(content, "mul%(%d+,%d+%)")
 
 for multiplication in uncorruptedData do
