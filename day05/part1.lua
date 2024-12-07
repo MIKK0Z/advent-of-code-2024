@@ -10,24 +10,10 @@ if not file then
     return
 end
 
-function dump(o)
-    if type(o) == 'table' then
-       local s = '{\n'
-       for k,v in pairs(o) do
-          if type(k) ~= 'number' then k = '"'..k..'"' end
-          s = s .. '\t['..k..'] = ' .. dump(v) .. ',\n'
-       end
-       return s .. '} '
-    else
-       return tostring(o)
-    end
- end
- 
-
 local content = file:read("a")
 file:close()
 
-local rules = {}
+local cantBeAfter = {}
 local updates = {}
 
 local appendToRules = true
@@ -39,12 +25,13 @@ for line in content:gmatch("[^\n]*") do
     end
     
     if appendToRules then
-        local rule = {}
-        for part in line:gmatch("[^|]+") do
-            table.insert(rule, part)
+        local value, key = line:match("(%d+)|(%d+)")
+    
+        if cantBeAfter[key] == nil then
+            cantBeAfter[key] = { [value] = true}
+        else
+            cantBeAfter[key][value] = true
         end
-
-        table.insert(rules, rule)
     else
         local update = {}
         for part in line:gmatch("[^,]+") do
@@ -57,10 +44,27 @@ for line in content:gmatch("[^\n]*") do
     ::continue::
 end
 
-for i, rule in ipairs(rules) do
-    printf("rule %d: %s\n", i, dump(rule))
+local function parseUpdate(update)
+    for i, page in ipairs(update) do
+        if cantBeAfter[page] ~= nil then
+            for _, next in ipairs({ table.unpack(update, i) }) do
+                if cantBeAfter[page][next] then
+                    return false
+                end
+            end
+        end
+    end
+
+    return true
 end
 
-for i, update in ipairs(updates) do
-    printf("update %d: %s\n", i, dump(update))
+local sum = 0
+for _, update in ipairs(updates) do
+
+    if parseUpdate(update) then
+        sum = sum + update[(#update + 1) / 2]
+    end
 end
+
+
+printf("sum: %d\n", sum)
